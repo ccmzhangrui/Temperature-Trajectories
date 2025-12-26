@@ -1,0 +1,35 @@
+name: Update Docs
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+jobs:
+  build-and-update-docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Generate synthetic data
+      run: python generate_synthetic_data.py
+    - name: Run analysis & generate plots
+      run: python main.py
+    - name: Build gallery
+      run: python generate_gallery.py
+    - name: Commit updated docs & history
+      run: |
+        DATE=$(date -u +'%Y-%m-%d')
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add docs/*.png docs/gallery.html data/sepsis_data.csv results_*.csv history/*
+        git commit -m "Auto-update docs, history & gallery ${DATE} [skip ci]" || echo "No changes detected"
+        git push
