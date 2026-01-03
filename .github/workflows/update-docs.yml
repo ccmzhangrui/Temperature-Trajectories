@@ -5,6 +5,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
+
+# 关键：设置权限
+permissions:
+  contents: write  # 允许推送代码
+
 jobs:
   build-and-update-docs:
     runs-on: ubuntu-latest
