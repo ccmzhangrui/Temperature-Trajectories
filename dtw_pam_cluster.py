@@ -1,33 +1,56 @@
 import numpy as np
-from dtw import distance_matrix_fast as distance_matrix  # 修复导入
+import random
+# from dtaidistance import distance
+from dtaidistance import dtw
 from pyclustering.cluster.kmedoids import kmedoids
 from sklearn.metrics import silhouette_score
-import random
 
 
-def cluster_temperature_trajectories_pam(trajectories):
-    # 计算 DTW 距离矩阵
-    dist_matrix = distance_matrix(trajectories)
-    dist_matrix_std = (dist_matrix - dist_matrix.mean()) / dist_matrix.std()
+def cluster_temperature_trajectories_pam(trajectories, k_min=2, k_max=5, random_seed=42):
+    """
+    Cluster trajectories with PAM (k-medoids) using a DTW distance matrix.
+    Choose k by highest silhouette score (precomputed distance).
 
-    best_score = -1
+    Returns:
+      (best_labels, optimal_clusters, best_score_or_nan)
+    """
+    rng = random.Random(random_seed)
+
+    trajectories = [np.asarray(t, dtype=float).ravel() for t in trajectories]
+    n = len(trajectories)
+    if n < 2:
+        raise ValueError("Need at least 2 trajectories for clustering.")
+
+    # dist_matrix = np.asarray(distance.matrix(trajectories), dtype=float)
+    dist_matrix = np.asarray(dtw.distance_matrix(trajectories), dtype=float)
+
+    best_score = -np.inf
     best_labels = None
     optimal_clusters = None
 
-    for n_clusters in range(2, 6):
-        initial_medoids = random.sample(range(len(dist_matrix_std)), n_clusters)
-        pam_instance = kmedoids(dist_matrix_std.tolist(), initial_medoids,  data_type='distance_matrix')
-        pam_instance.process()
-        clusters = pam_instance.get_clusters()
+    for n_clusters in range(k_min, min(k_max, n - 1) + 1):
+        initial_medoids = rng.sample(range(n), n_clusters)
+        pam = kmedoids(dist_matrix, initial_medoids, data_type="distance_matrix")
+        pam.process()
 
-        labels = np.zeros(len(dist_matrix_std), dtype=int)
-        for cid, cluster in enumerate(clusters):
-            for idx in cluster:
-                labels[idx] = cid
+        clusters = pam.get_clusters()
+        labels = np.full(n, -1, dtype=int)
+        for cid, idxs in enumerate(clusters):
+            labels[idxs] = cid
 
-        score = silhouette_score(dist_matrix_std, labels, metric='precomputed')
+        score = np.nan
+        n_labels = len(set(labels.tolist()))
+        if -1 not in labels and 1 < n_labels < n:
+            score = silhouette_score(dist_matrix, labels, metric="precomputed")
 
-        if score > best_score:
-            best_score, best_labels, optimal_clusters = score, labels, n_clusters
+        # Prefer finite silhouette; otherwise keep first feasible solution.
+        if np.isfinite(score) and (not np.isfinite(best_score) or score > best_score):
+            best_score = score
+            best_labels = labels
+            optimal_clusters = n_clusters
+        elif best_labels is None:
+            best_score = score
+            best_labels = labels
+            optimal_clusters = n_clusters
 
     return best_labels, optimal_clusters, best_score

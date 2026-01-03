@@ -1,23 +1,55 @@
 import numpy as np
-from dtw import distance_matrix_fast as distance_matrix  # 修复导入
+# from dtaidistance import distance
+from dtaidistance import dtw
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
 
 
-def cluster_temperature_trajectories_gmm(trajectories):
-    # 计算 DTW 距离矩阵
-    dist_matrix = distance_matrix(trajectories)
-    # 标准化
-    dist_matrix_std = (dist_matrix - dist_matrix.mean()) / dist_matrix.std()
+def cluster_temperature_trajectories_gmm(trajectories, k_min=2, k_max=5, random_state=42):
+    """
+    Cluster trajectories using:
+      - DTW distance matrix
+      - Row-wise standardized distance vectors as features
+      - Gaussian Mixture Model
+      - Choose k by lowest BIC
 
-    bic_scores, silhouette_scores = [], []
-    for n_clusters in range(2, 6):
-        gmm = GaussianMixture(n_components=n_clusters, covariance_type='full', random_state=42)
-        labels = gmm.fit_predict(dist_matrix_std)
-        bic_scores.append(gmm.bic(dist_matrix_std))
-        silhouette_scores.append(silhouette_score(dist_matrix_std, labels))
+    Returns:
+      (final_labels, optimal_clusters, silhouette_at_optimal_or_nan)
+    """
+    trajectories = [np.asarray(t, dtype=float).ravel() for t in trajectories]
+    n = len(trajectories)
+    if n < 2:
+        raise ValueError("Need at least 2 trajectories for clustering.")
 
-    optimal_clusters = np.argmin(bic_scores) + 2
-    gmm_final = GaussianMixture(n_components=optimal_clusters, covariance_type='full',  random_state=42)
-    final_labels = gmm_final.fit_predict(dist_matrix_std)
-    return final_labels, optimal_clusters, silhouette_scores[optimal_clusters - 2]
+    # dist_matrix = np.asarray(distance.matrix(trajectories), dtype=float)
+    dist_matrix = np.asarray(dtw.distance_matrix(trajectories), dtype=float)
+    mean = dist_matrix.mean()
+    std = dist_matrix.std()
+    X = (dist_matrix - mean) / (std if std != 0 else 1.0)
+
+    bic_scores = []
+    sil_scores = []
+    labels_list = []
+
+    for n_clusters in range(k_min, min(k_max, n - 1) + 1):
+        gmm = GaussianMixture(n_components=n_clusters, covariance_type="full", random_state=random_state)
+        labels = gmm.fit_predict(X)
+        labels_list.append(labels)
+
+        bic_scores.append(gmm.bic(X))
+
+        sil = np.nan
+        n_labels = len(set(labels.tolist()))
+        if 1 < n_labels < n:
+            sil = silhouette_score(X, labels)
+        sil_scores.append(sil)
+
+    if not bic_scores:
+        raise ValueError("No feasible k in the given range for the number of trajectories.")
+
+    best_idx = int(np.argmin(bic_scores))
+    optimal_clusters = k_min + best_idx
+    final_labels = labels_list[best_idx]
+    final_sil = sil_scores[best_idx]
+
+    return final_labels, optimal_clusters, final_sil
