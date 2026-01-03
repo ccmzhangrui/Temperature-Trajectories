@@ -1,17 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset='utf-8'>
+<meta charset="utf-8">
 <title>Phenotype History Gallery</title>
-<style>body{font-family:Arial;background:#f4f4f4;padding:20px}.controls{textalign:center;margin-bottom:20px}button{padding:8px 12px;margin:0 5px; cursor: pointer; border: none; background:  # 0055aa;color:white}.entry{display:inlineblock;margin:10px;padding:5px;background:#fff;border:1px solid #ccc}.hidden{display:none} img {max - width: 300px} </style> 
+<style>
+body{font-family:Arial;background:#f4f4f4;padding:20px}
+.controls{text-align:center;margin-bottom:20px}
+button{padding:8px 12px;margin:0 5px;cursor:pointer;border:none;background:#0055aa;color:white}
+.entry{display:inline-block;margin:10px;padding:5px;background:#fff;border:1px solid #ccc;vertical-align:top}
+.hidden{display:none}
+img{max-width:300px;display:block}
+</style>
 </head>
 <body>
 <h1>Phenotype Analysis History</h1>
-<div class='controls'>
+<div class="controls">
 <button onclick="filterType('all')">Show All</button>
 <button onclick="filterType('gmm')">GMM Only</button>
 <button onclick="filterType('pam')">PAM Only</button>
 </div>
-<script>function filterType(t) {document.querySelectorAll('.entry').forEach(e= > { if (t ==='all') {e.classList.remove('hidden');}  else {e.classList.add('hidden'); if (e.dataset.type ===t)e.classList.remove('hidden');}});} </script>
+<script>
+function filterType(t){
+  document.querySelectorAll('.entry').forEach(function(e){
+    if(t==='all'){ e.classList.remove('hidden'); return; }
+    e.classList.add('hidden');
+    if(e.dataset.type===t){ e.classList.remove('hidden'); }
+  });
+}
+</script>
+<h2>2026-01-03</h2>
+<div class="entry" data-type="gmm"><img src="../history/2026-01-03_gmm_coagulation.png" alt="2026-01-03_gmm_coagulation.png"/><p>2026-01-03_gmm_coagulation.png</p></div>
+<div class="entry" data-type="gmm"><img src="../history/2026-01-03_gmm_trajectories.png" alt="2026-01-03_gmm_trajectories.png"/><p>2026-01-03_gmm_trajectories.png</p></div>
+<div class="entry" data-type="pam"><img src="../history/2026-01-03_pam_coagulation.png" alt="2026-01-03_pam_coagulation.png"/><p>2026-01-03_pam_coagulation.png</p></div>
+<div class="entry" data-type="pam"><img src="../history/2026-01-03_pam_trajectories.png" alt="2026-01-03_pam_trajectories.png"/><p>2026-01-03_pam_trajectories.png</p></div>
+<div class="entry" data-type="gmm"><a href="../history/2026-01-03_results_gmm.csv" target="_blank">Download 2026-01-03_results_gmm.csv</a></div>
+<div class="entry" data-type="pam"><a href="../history/2026-01-03_results_pam.csv" target="_blank">Download 2026-01-03_results_pam.csv</a></div>
 </body>
 </html>
